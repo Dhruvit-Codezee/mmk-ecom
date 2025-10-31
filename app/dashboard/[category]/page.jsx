@@ -23,6 +23,7 @@ export default function CategoryPage() {
   const [editId, setEditId] = useState(null);
 
   const [newProduct, setNewProduct] = useState({
+    skuId: "",
     name: "",
     description: "",
     price: "",
@@ -55,6 +56,11 @@ export default function CategoryPage() {
     const imageRegex = /\.(jpeg|jpg|png)$/i;
 
     switch (field) {
+      case "skuId":
+        if (!value.trim()) newErrors.skuId = "SKU ID is required.";
+        else delete newErrors.skuId;
+        break;
+
       case "name":
         if (!value.trim()) newErrors.name = "Product name is required.";
         else delete newErrors.name;
@@ -74,8 +80,7 @@ export default function CategoryPage() {
       case "image":
         if (!value.trim()) newErrors.image = "Product image URL is required.";
         else if (!imageRegex.test(value))
-          newErrors.image =
-            "Only .jpg, .jpeg, and .png image URLs are allowed.";
+          newErrors.image = "Only .jpg, .jpeg, and .png image URLs are allowed.";
         else delete newErrors.image;
         break;
 
@@ -101,11 +106,11 @@ export default function CategoryPage() {
     const imageUrl = newProduct.images[0].trim();
     const imageRegex = /\.(jpeg|jpg|png)$/i;
 
+    if (!newProduct.skuId.trim()) newErrors.skuId = "SKU ID is required.";
     if (!newProduct.name.trim()) newErrors.name = "Product name is required.";
     if (!newProduct.description.trim())
       newErrors.description = "Product description is required.";
-    if (!newProduct.price.trim())
-      newErrors.price = "Product price is required.";
+    if (!newProduct.price.trim()) newErrors.price = "Product price is required.";
 
     if (!imageUrl) {
       newErrors.image = "Product image URL is required.";
@@ -141,7 +146,7 @@ export default function CategoryPage() {
       }
 
       setShowForm(false);
-      setNewProduct({ name: "", description: "", price: "", images: [""] });
+      setNewProduct({ skuId: "", name: "", description: "", price: "", images: [""] });
       setErrors({});
       setIsEditing(false);
       setEditId(null);
@@ -154,6 +159,7 @@ export default function CategoryPage() {
   // 🔹 Edit
   const handleEditClick = (product) => {
     setNewProduct({
+      skuId: product.skuId || "",
       name: product.name,
       description: product.description,
       price: product.price.toString(),
@@ -196,6 +202,7 @@ export default function CategoryPage() {
             setIsEditing(false);
             setEditId(null);
             setNewProduct({
+              skuId: "",
               name: "",
               description: "",
               price: "",
@@ -234,9 +241,12 @@ export default function CategoryPage() {
                 </div>
               </div>
               <div className="p-5">
-                <h3 className="text-lg font-bold text-[#3b2f2f] mb-2">
+                <h3 className="text-lg font-bold text-[#3b2f2f] mb-1">
                   {product.name}
                 </h3>
+                <p className="text-[#7b6b6b] text-sm mb-1">
+                  <strong>SKU:</strong> {product.skuId || "—"}
+                </p>
                 <p className="text-[#7b6b6b] text-sm mb-4 line-clamp-2">
                   {product.description}
                 </p>
@@ -284,6 +294,7 @@ export default function CategoryPage() {
 
             <div className="space-y-5">
               {[
+                { label: "SKU ID", key: "skuId", type: "text" },
                 { label: "Product Name", key: "name", type: "text" },
                 { label: "Product Description", key: "description", type: "textarea" },
                 { label: "Price", key: "price", type: "number" },
@@ -343,4 +354,3 @@ export default function CategoryPage() {
     </div>
   );
 }
- 
