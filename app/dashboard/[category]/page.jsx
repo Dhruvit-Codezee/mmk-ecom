@@ -27,7 +27,11 @@ export default function CategoryPage() {
     name: "",
     description: "",
     price: "",
-    images: [""],
+    image1: "",
+    image2: "",
+    image3: "",
+    image4: "",
+    image5: "",
   });
 
   // 🔹 Fetch products
@@ -53,7 +57,6 @@ export default function CategoryPage() {
   // 🔹 Validation
   const validateField = (field, value) => {
     const newErrors = { ...errors };
-    const imageRegex = /\.(jpeg|jpg|png)$/i;
 
     switch (field) {
       case "skuId":
@@ -78,9 +81,8 @@ export default function CategoryPage() {
         break;
 
       case "image":
-        if (!value.trim()) newErrors.image = "Product image URL is required.";
-        else if (!imageRegex.test(value))
-          newErrors.image = "Only .jpg, .jpeg, and .png image URLs are allowed.";
+        if (!value.trim())
+          newErrors.image = "At least one image URL is required.";
         else delete newErrors.image;
         break;
 
@@ -96,26 +98,36 @@ export default function CategoryPage() {
     validateField(field, value);
   };
 
-  const handleImageChange = (value) => {
-    setNewProduct((prev) => ({ ...prev, images: [value] }));
-    validateField("image", value);
+  const handleImageChange = (field, value) => {
+    setNewProduct((prev) => ({ ...prev, [field]: value }));
+    const allImages = { ...newProduct, [field]: value };
+    const filledImages = ["image1", "image2", "image3", "image4", "image5"]
+      .map((k) => allImages[k]?.trim())
+      .filter(Boolean);
+    const hasAny = filledImages.length > 0;
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (!hasAny) next.image = "At least one image URL is required.";
+      else delete next.image;
+      return next;
+    });
   };
 
   const validateAll = () => {
     const newErrors = {};
-    const imageUrl = newProduct.images[0].trim();
-    const imageRegex = /\.(jpeg|jpg|png)$/i;
+    const filledImages = ["image1", "image2", "image3", "image4", "image5"]
+      .map((k) => newProduct[k]?.trim())
+      .filter(Boolean);
 
     if (!newProduct.skuId.trim()) newErrors.skuId = "SKU ID is required.";
     if (!newProduct.name.trim()) newErrors.name = "Product name is required.";
     if (!newProduct.description.trim())
       newErrors.description = "Product description is required.";
-    if (!newProduct.price.trim()) newErrors.price = "Product price is required.";
+    if (!newProduct.price.trim())
+      newErrors.price = "Product price is required.";
 
-    if (!imageUrl) {
-      newErrors.image = "Product image URL is required.";
-    } else if (!imageRegex.test(imageUrl)) {
-      newErrors.image = "Only .jpg, .jpeg, and .png image URLs are allowed.";
+    if (filledImages.length === 0) {
+      newErrors.image = "At least one image URL is required.";
     }
 
     setErrors(newErrors);
@@ -127,26 +139,44 @@ export default function CategoryPage() {
     e.preventDefault();
     if (!validateAll()) return;
 
+    // Build images array from 5 separate fields - pass as array to Firebase
+    const images = ["image1", "image2", "image3", "image4", "image5"]
+      .map((k) => newProduct[k]?.trim())
+      .filter(Boolean);
+
+    const productData = {
+      skuId: newProduct.skuId,
+      name: newProduct.name,
+      description: newProduct.description,
+      images,
+      price: Number(newProduct.price),
+    };
+
     try {
       if (isEditing && editId) {
         const productRef = doc(db, category, editId);
-        await updateDoc(productRef, {
-          ...newProduct,
-          price: Number(newProduct.price),
-          updatedAt: new Date(),
-        });
+        await updateDoc(productRef, { ...productData, updatedAt: new Date() });
         alert("✅ Product updated successfully!");
       } else {
         await addDoc(collection(db, category), {
-          ...newProduct,
-          price: Number(newProduct.price),
+          ...productData,
           createdAt: new Date(),
         });
         alert("✅ Product added successfully!");
       }
 
       setShowForm(false);
-      setNewProduct({ skuId: "", name: "", description: "", price: "", images: [""] });
+      setNewProduct({
+        skuId: "",
+        name: "",
+        description: "",
+        price: "",
+        image1: "",
+        image2: "",
+        image3: "",
+        image4: "",
+        image5: "",
+      });
       setErrors({});
       setIsEditing(false);
       setEditId(null);
@@ -156,14 +186,24 @@ export default function CategoryPage() {
     }
   };
 
-  // 🔹 Edit
+  // 🔹 Edit - map Firebase images array back to 5 separate fields
   const handleEditClick = (product) => {
+    const rawImages = product.images;
+    const existingImages = Array.isArray(rawImages)
+      ? rawImages
+      : rawImages
+      ? [String(rawImages)]
+      : [];
     setNewProduct({
       skuId: product.skuId || "",
       name: product.name,
       description: product.description,
       price: product.price.toString(),
-      images: product.images || [""],
+      image1: existingImages[0] || "",
+      image2: existingImages[1] || "",
+      image3: existingImages[2] || "",
+      image4: existingImages[3] || "",
+      image5: existingImages[4] || "",
     });
     setIsEditing(true);
     setEditId(product.id);
@@ -206,7 +246,11 @@ export default function CategoryPage() {
               name: "",
               description: "",
               price: "",
-              images: [""],
+              image1: "",
+              image2: "",
+              image3: "",
+              image4: "",
+              image5: "",
             });
           }}
           className="bg-gradient-to-r from-[#b88a44] to-[#e5c17c] text-white px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-transform hover:scale-105"
@@ -272,13 +316,13 @@ export default function CategoryPage() {
 
       {/* Add / Edit Modal */}
       {showForm && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50 p-4 overflow-y-auto">
           <motion.form
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.2 }}
             onSubmit={handleSubmit}
-            className="bg-white/95 backdrop-blur-md p-10 rounded-3xl shadow-2xl w-[600px] relative border border-[#e5c17c]/40"
+            className="bg-white/95 backdrop-blur-md p-10 rounded-3xl shadow-2xl w-[600px] max-h-[90vh] overflow-y-auto relative border border-[#e5c17c]/40 my-auto"
           >
             <button
               onClick={() => setShowForm(false)}
@@ -296,7 +340,11 @@ export default function CategoryPage() {
               {[
                 { label: "SKU ID", key: "skuId", type: "text" },
                 { label: "Product Name", key: "name", type: "text" },
-                { label: "Product Description", key: "description", type: "textarea" },
+                {
+                  label: "Product Description",
+                  key: "description",
+                  type: "textarea",
+                },
                 { label: "Price", key: "price", type: "number" },
               ].map(({ label, key, type }) => (
                 <div key={key}>
@@ -326,16 +374,34 @@ export default function CategoryPage() {
               ))}
 
               <div>
-                <label className="block font-medium text-[#4b3b2a] mb-1">
-                  Image URL <span className="text-red-500">*</span>
+                <label className="block font-medium text-[#4b3b2a] mb-2">
+                  Image URLs <span className="text-red-500">*</span>{" "}
+                  <span className="text-sm font-normal text-[#7b6b6b]">
+                    (up to 5)
+                  </span>
                 </label>
-                <input
-                  type="text"
-                  placeholder="Image URL (e.g. https://i.ibb.co/xyz.jpg)"
-                  value={newProduct.images[0]}
-                  onChange={(e) => handleImageChange(e.target.value)}
-                  className="w-full border border-[#d6c3a9] p-3 rounded-lg focus:ring-2 focus:ring-[#b88a44] outline-none placeholder:text-[#7b6b6b] text-[#4b3b2a]"
-                />
+                <div className="space-y-3">
+                  {[
+                    { key: "image1", label: "Image 1" },
+                    { key: "image2", label: "Image 2" },
+                    { key: "image3", label: "Image 3" },
+                    { key: "image4", label: "Image 4" },
+                    { key: "image5", label: "Image 5" },
+                  ].map(({ key, label }) => (
+                    <div key={key}>
+                      <label className="block text-sm text-[#7b6b6b] mb-1">
+                        {label}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={`${label} URL (e.g. https://i.ibb.co/xyz.jpg)`}
+                        value={newProduct[key]}
+                        onChange={(e) => handleImageChange(key, e.target.value)}
+                        className="w-full border border-[#d6c3a9] p-3 rounded-lg focus:ring-2 focus:ring-[#b88a44] outline-none placeholder:text-[#7b6b6b] text-[#4b3b2a]"
+                      />
+                    </div>
+                  ))}
+                </div>
                 {errors.image && (
                   <p className="text-red-500 text-sm mt-1">{errors.image}</p>
                 )}
